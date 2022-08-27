@@ -50,6 +50,7 @@ std::vector<bbox_t> Yolov7TRT::EngineInference(cv::Mat &image)
                   // return (A.prob > B.prob);
                   return ((static_cast<float>(A.w) * static_cast<float>(A.h)) > (static_cast<float>(B.h) * static_cast<float>(B.w)));
               });
+    clearBuffer();
     return boxes;
 }
 
@@ -120,7 +121,6 @@ bool Yolov7TRT::processInput(float *hostDataBuffer, const int batchSize, cudaStr
         VLOG(ERROR) << "Input corrupted or CUDA error, abort ";
         return false;
     }
-
     return true;
 }
 

@@ -1,5 +1,5 @@
-#ifndef YOLOV4_H
-#define YOLOV4_H
+#ifndef YOLOV7_TENSORRT_H
+#define YOLOV7_TENSORRT_H
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/cudaarithm.hpp>
@@ -14,10 +14,6 @@
 #include "../TrtExec/Trtexec.h"
 
 extern VizgardLogger::Logger *vizgardLogger;
-namespace Yolov7Trt
-{
-    const char c[] = {'\0', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '!', '"', '#', '$', '%', '&', '\'', '(', ')', '*', '+', ',', '-', '.', '/', ':', ';', '<', '=', '>', '?', '@', '[', '\\', ']', '^', '_', '`', '{', '|', '}', '~', ' ', '*' /*€*/, 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
-}
 
 class Yolov7TRT : public TrtExec
 {
@@ -71,4 +67,4 @@ private:
 
 bool readTrtFile(const std::string &engineFile, nvinfer1::ICudaEngine *&engine, IVizgardLogger &iVLogger);
 
-#endif // YOLOV4_H
+#endif // YOLOV7_TENSORRT_H

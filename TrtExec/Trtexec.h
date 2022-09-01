@@ -67,7 +67,7 @@ struct VizgardDestroyPtr
     template <class T>
     void operator()(T *obj) const
     {
-        if (obj)
+        if (obj==nullptr)
         {
             obj->destroy();
         }

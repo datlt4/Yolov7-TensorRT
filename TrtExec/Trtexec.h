@@ -21,7 +21,7 @@
 #include "VizgardLogger.h"
 
 #ifndef TAGLINE
-#define TAGLINE "\t <File:" << __FUNCTION__ << ">" << "<L" << __LINE__ << "> "
+#define TAGLINE "\t<L" << __LINE__ << "> "
 #endif // TAGLINE
 
 struct OnnxParserConfig
@@ -67,12 +67,13 @@ struct VizgardDestroyPtr
     template <class T>
     void operator()(T *obj) const
     {
-        if (obj==nullptr)
+        if (obj != nullptr)
         {
             obj->destroy();
         }
     }
 };
+
 template <class T>
 using VizgardUniquePtr = std::unique_ptr<T, VizgardDestroyPtr>;
 
@@ -135,9 +136,23 @@ protected:
     bool clearBuffer(bool freeInput = true, bool freeOutput = true);
 
 public:
-    TrtExec(const OnnxParserConfig &info) : info{info} { cudaStreamCreate(&stream); }
+    TrtExec(const OnnxParserConfig &info) : info{info}
+    {
+        cudaStreamCreate(&stream);
+    }
     TrtExec() { cudaStreamCreate(&stream); }
-    ~TrtExec() { cudaStreamDestroy(stream); }
+    ~TrtExec()
+    {
+        cudaStreamDestroy(stream);
+        for (void *buf : output_buffers)
+            cudaFree(buf);
+        for (void *buf : input_buffers)
+            cudaFree(buf);
+        this->prediction_context.reset();
+        this->prediction_engine.reset();
+        this->prediction_network.reset();
+        this->onnxParser.onnxParser.reset();
+    }
 
     /*virtual*/ bool parseOnnxModel();
     /*virtual*/ bool saveEngine(const std::string &fileName);
@@ -165,6 +180,22 @@ namespace VizgardTrt
         oss << dim_shape.d[dim_shape.nbDims - 1] << ".  Some elements: ";
         int64_t v = volume(dim_shape);
         std::vector<float> cpu_output(v > 0 ? v : -v);
+        cudaMemcpy(cpu_output.data(), (float *)cuda_buffer, cpu_output.size() * sizeof(float), cudaMemcpyDeviceToHost);
+        for (int i = 0; i < number_p; i++)
+            oss << cpu_output[i] << " ";
+        oss << std::endl;
+        return oss.str();
+    }
+
+    inline std::string log_cuda_bf(size_t len, void *cuda_buffer, int number_p)
+    {
+        std::ostringstream oss;
+        if (!cuda_buffer)
+            oss << "Null buffer !" << std::endl;
+        oss << "Buffer size: ";
+        oss << "[ " << len << " ]"
+            << ".  Some elements: ";
+        std::vector<float> cpu_output(len);
         cudaMemcpy(cpu_output.data(), (float *)cuda_buffer, cpu_output.size() * sizeof(float), cudaMemcpyDeviceToHost);
         for (int i = 0; i < number_p; i++)
             oss << cpu_output[i] << " ";

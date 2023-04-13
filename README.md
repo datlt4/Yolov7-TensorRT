@@ -28,6 +28,17 @@ cd build/TrtExec
     --maxShape 1x3x640x640 \
     --workspace 1024 \
     --useDLACore 0
+
+
+./TrtExec-bin \
+    --onnx /home/kikai/Documents/Yolov7-TensorRT/yolov5s.onnx \
+    --engine /home/kikai/Documents/Yolov7-TensorRT/yolov5s-dla.engine \
+    --inputName "images" \
+    --minShape 1x3x640x640 \
+    --optShape 1x3x640x640 \
+    --maxShape 1x3x640x640 \
+    --workspace 1024 \
+    --useDLACore 0
 ```
 
 # Result

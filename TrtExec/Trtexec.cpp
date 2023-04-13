@@ -34,12 +34,8 @@ bool TrtExec::parseOnnxModel()
     {
         config->setDLACore(info.DLACore);
         config->setFlag(nvinfer1::BuilderFlag::kGPU_FALLBACK);
-        if (!config->getFlag(nvinfer1::BuilderFlag::kINT8))
-        {
-            // User has not requested INT8 Mode.
-            // By default run in FP16 mode. FP32 mode is not permitted.
-            config->setFlag(nvinfer1::BuilderFlag::kFP16);
-        }
+        config->setFlag(nvinfer1::BuilderFlag::kSTRICT_TYPES);
+        config->setDefaultDeviceType(nvinfer1::DeviceType::kDLA);
     }
     if (info.dynamicOnnx)
     {

@@ -43,6 +43,7 @@ struct OnnxParserConfig
     std::string onnx_dir;
     std::string engine_dir;
     bool dynamicOnnx{false};
+    int DLACore{-1};
     friend std::ostream &operator<<(std::ostream &os, const OnnxParserConfig config)
     {
         os << "  --onnx         : " << config.onnx_dir << std::endl
@@ -50,7 +51,8 @@ struct OnnxParserConfig
            << "  --minShape     : " << config.minBatchSize << "x" << config.minImageChannel << "x" << config.minImageHeight << "x" << config.minImageWidth << std::endl
            << "  --optShape     : " << config.optBatchSize << "x" << config.optImageChannel << "x" << config.optImageHeight << "x" << config.optImageWidth << std::endl
            << "  --maxShape     : " << config.maxBatchSize << "x" << config.maxImageChannel << "x" << config.maxImageHeight << "x" << config.maxImageWidth << std::endl
-           << "  --dynamicOnnx  : " << (config.dynamicOnnx ? "True" : "False") << std::endl;
+           << "  --dynamicOnnx  : " << (config.dynamicOnnx ? "True" : "False") << std::endl
+           << "  --useDLACore   : " << config.DLACore << std::endl;
         return os;
     }
 };

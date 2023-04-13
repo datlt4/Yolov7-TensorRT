@@ -24,6 +24,23 @@ bool TrtExec::parseOnnxModel()
     config->setFlag(nvinfer1::BuilderFlag::kFP16);
     // allow TensorRT to use up to 1GB of GPU memory for tactic selection.
     config->setMaxWorkspaceSize(info.workspace);
+    if (builder->getNbDLACores() == 0)
+    {
+        std::cerr << "Trying to use DLA core " << info.DLACore << " on a platform that doesn't have any DLA cores"
+                  << std::endl;
+        assert("Error: use DLA core on a platfrom that doesn't have any DLA cores" && false);
+    }
+    if (info.DLACore >= 0)
+    {
+        config->setDLACore(info.DLACore);
+        config->setFlag(nvinfer1::BuilderFlag::kGPU_FALLBACK);
+        if (!config->getFlag(nvinfer1::BuilderFlag::kINT8))
+        {
+            // User has not requested INT8 Mode.
+            // By default run in FP16 mode. FP32 mode is not permitted.
+            config->setFlag(nvinfer1::BuilderFlag::kFP16);
+        }
+    }
     if (info.dynamicOnnx)
     {
         builder->setMaxBatchSize(info.maxBatchSize);
@@ -148,6 +165,7 @@ void ShowHelpAndExit(const char *szBadOption = NULL)
         << "    --onnx [PATH]       : path to Onnx file" << std::endl
         << "    --engine [PATH]     : name of output Engine file" << std::endl
         << "    --dynamicOnnx       : indicate that build engine with Dynamic Batch Size" << std::endl
+        << "    --useDLACore [INDEX]: indicate that build engine with DLA device" << std::endl
         << "    --minShape [BxCxHxW]: min input shape" << std::endl
         << "    --optShape [BxCxHxW]: optimization input shape" << std::endl
         << "    --maxShape [BxCxHxW]: max input shape" << std::endl
@@ -212,6 +230,18 @@ bool ParseCommandLine(int argc, char *argv[], OnnxParserConfig &config)
         else if (std::string(argv[i]) == std::string("--dynamicOnnx"))
         {
             config.dynamicOnnx = true;
+            continue;
+        }
+        else if (std::string(argv[i]) == std::string("--useDLACore"))
+        {
+            if (++i == argc)
+            {
+                ShowHelpAndExit("--useDLACore");
+                return false;
+            }
+            else
+                config.DLACore = std::stoi(argv[i]);
+            continue;
         }
         else if (std::string(argv[i]) == std::string("--minShape"))
         {

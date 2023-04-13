@@ -15,7 +15,6 @@ Yolov7TRT::Yolov7TRT() : TrtExec()
     {
         refer_rows += std::accumulate(grid.begin(), grid.end(), 1, std::multiplies<int>());
     }
-    std::cout << TAGLINE << "refer_rows: " << refer_rows << std::endl;
     GenerateReferMatrix();
 }
 
@@ -23,6 +22,7 @@ bool Yolov7TRT::LoadEngine(const std::string &fileName)
 {
     bool r = this->loadEngine(fileName);
     assert(r);
+    std::cout << fileName << " is loaded\n";
     return r;
 }
 

@@ -1,6 +1,6 @@
 #include "Trtexec.h"
 
-VizgardLogger::Logger *vizgardLogger = VizgardLogger::LoggerFactory::CreateConsoleLogger(VizgardLogger::INFO);
+EmoiLogger::Logger* emoiLogger = EmoiLogger::LoggerFactory::CreateConsoleLogger(EmoiLogger::INFO);
 
 // ./Trtexec \
 //     --onnx model.onnx \
@@ -12,11 +12,10 @@ VizgardLogger::Logger *vizgardLogger = VizgardLogger::LoggerFactory::CreateConso
 //     --workspace 1024
 //     --dynamicOnnx
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     OnnxParserConfig config;
-    if (ParseCommandLine(argc, argv, config))
-    {
+    if (ParseCommandLine(argc, argv, config)) {
         std::unique_ptr<TrtExec> executor = std::make_unique<TrtExec>(config);
         std::cout << config << std::endl;
         // if (config.dynamic)
@@ -24,9 +23,7 @@ int main(int argc, char **argv)
             executor->parseOnnxModel();
             executor->saveEngine(config.engine_dir);
         }
-        VLOG(INFO) << "[ PASSED ]:\n"
-                   << config << std::endl;
-    }
-    else
+        VLOG(INFO) << "[ PASSED ]:\n" << config << std::endl;
+    } else
         VLOG(ERROR) << "[ ERROR ] STOP!!!" << std::endl;
 }

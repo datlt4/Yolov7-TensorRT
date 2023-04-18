@@ -1,24 +1,22 @@
 #ifndef TRT_EXEC_H
 #define TRT_EXEC_H
 
-#include <iostream>
-#include <vector>
-#include <opencv2/opencv.hpp>
-#include <cmath>
-#include <assert.h>
-#include <map>
-#include <chrono>
-#include <atomic>
-#include <opencv2/opencv.hpp>
-#include <cuda_runtime_api.h>
-#include <map>
-#include <numeric>
-#include <iomanip>
-#include "NvOnnxParser.h"
+#include "EmoiLogger.h"
 #include "NvInfer.h"
 #include "NvInferRuntime.h"
+#include "NvOnnxParser.h"
 #include "fstream"
-#include "VizgardLogger.h"
+#include <assert.h>
+#include <atomic>
+#include <chrono>
+#include <cmath>
+#include <cuda_runtime_api.h>
+#include <iomanip>
+#include <iostream>
+#include <map>
+#include <numeric>
+#include <opencv2/opencv.hpp>
+#include <vector>
 
 #ifndef TAGLINE
 #define TAGLINE "\t<L" << __LINE__ << "> "
@@ -38,93 +36,79 @@ struct OnnxParserConfig
     int maxImageChannel;
     int maxImageHeight;
     int maxImageWidth;
-    int workspace{1ULL << 30};
+    int workspace{ 1ULL << 30 };
     std::string inputName;
     std::string onnx_dir;
     std::string engine_dir;
-    bool dynamicOnnx{false};
-    friend std::ostream &operator<<(std::ostream &os, const OnnxParserConfig config)
+    bool dynamicOnnx{ false };
+    friend std::ostream& operator<<(std::ostream& os, const OnnxParserConfig config)
     {
-        os << "  --onnx         : " << config.onnx_dir << std::endl
-           << "  --engine       : " << config.engine_dir << std::endl
-           << "  --minShape     : " << config.minBatchSize << "x" << config.minImageChannel << "x" << config.minImageHeight << "x" << config.minImageWidth << std::endl
-           << "  --optShape     : " << config.optBatchSize << "x" << config.optImageChannel << "x" << config.optImageHeight << "x" << config.optImageWidth << std::endl
-           << "  --maxShape     : " << config.maxBatchSize << "x" << config.maxImageChannel << "x" << config.maxImageHeight << "x" << config.maxImageWidth << std::endl
-           << "  --dynamicOnnx  : " << (config.dynamicOnnx ? "True" : "False") << std::endl;
+        os << "  --onnx         : " << config.onnx_dir << std::endl << "  --engine       : " << config.engine_dir << std::endl << "  --minShape     : " << config.minBatchSize << "x" << config.minImageChannel << "x" << config.minImageHeight << "x" << config.minImageWidth << std::endl << "  --optShape     : " << config.optBatchSize << "x" << config.optImageChannel << "x" << config.optImageHeight << "x" << config.optImageWidth << std::endl << "  --maxShape     : " << config.maxBatchSize << "x" << config.maxImageChannel << "x" << config.maxImageHeight << "x" << config.maxImageWidth << std::endl << "  --dynamicOnnx  : " << (config.dynamicOnnx ? "True" : "False") << std::endl;
         return os;
     }
 };
 
-void ShowHelpAndExit(const char *szBadOption);
-bool ParseCommandLine(int argc, char *argv[], OnnxParserConfig &config);
+void ShowHelpAndExit(const char* szBadOption);
+bool ParseCommandLine(int argc, char* argv[], OnnxParserConfig& config);
 
-extern VizgardLogger::Logger *vizgardLogger;
+extern EmoiLogger::Logger* emoiLogger;
 
 using Severity = nvinfer1::ILogger::Severity;
 
-struct VizgardDestroyPtr
+struct EmoiDestroyPtr
 {
-    template <class T>
-    void operator()(T *obj) const
+    template<class T>
+    void operator()(T* obj) const
     {
-        if (obj != nullptr)
-        {
+        if (obj != nullptr) {
             obj->destroy();
         }
     }
 };
 
-template <class T>
-using VizgardUniquePtr = std::unique_ptr<T, VizgardDestroyPtr>;
+template<class T>
+using EmoiUniquePtr = std::unique_ptr<T, EmoiDestroyPtr>;
 
-template <typename T>
-VizgardUniquePtr<T> makeUnique(T *t)
+template<typename T>
+EmoiUniquePtr<T> makeUnique(T* t)
 {
-    return VizgardUniquePtr<T>{t};
+    return EmoiUniquePtr<T>{ t };
 }
 
-struct VizgardOnnxParser
+struct EmoiOnnxParser
 {
-    VizgardUniquePtr<nvonnxparser::IParser> onnxParser;
-    operator bool() const
-    {
-        return !!(onnxParser);
-    }
+    EmoiUniquePtr<nvonnxparser::IParser> onnxParser;
+    operator bool() const { return !!(onnxParser); }
 };
 
-class IVizgardLogger : public nvinfer1::ILogger
+class IEmoiLogger : public nvinfer1::ILogger
 {
-public:
-    void log(Severity severity, const char *msg) noexcept override
+  public:
+    void log(Severity severity, const char* msg) noexcept override
     {
-        static VizgardLogger::LogLevel map[] = {
-            VizgardLogger::FATAL, VizgardLogger::ERROR, VizgardLogger::WARNING, VizgardLogger::INFO, VizgardLogger::TRACE};
-        if ((severity == Severity::kERROR) || (severity == Severity::kINTERNAL_ERROR))
-        {
-            VizgardLogger::LogTransaction(vizgardLogger, map[(int)severity], __FILE__, __LINE__, __FUNCTION__).GetStream() << msg;
+        static EmoiLogger::LogLevel map[] = { EmoiLogger::FATAL, EmoiLogger::ERROR, EmoiLogger::WARNING, EmoiLogger::INFO, EmoiLogger::TRACE };
+        if ((severity == Severity::kERROR) || (severity == Severity::kINTERNAL_ERROR)) {
+            EmoiLogger::LogTransaction(emoiLogger, map[(int)severity], __FILE__, __LINE__, __FUNCTION__).GetStream() << msg;
         }
     }
-    nvinfer1::ILogger &getTRTLogger()
-    {
-        return *this;
-    }
+    nvinfer1::ILogger& getTRTLogger() { return *this; }
 };
 
 class TrtExec
 {
-protected:
-    VizgardOnnxParser onnxParser;
-    VizgardUniquePtr<nvinfer1::INetworkDefinition> prediction_network;
-    VizgardUniquePtr<nvinfer1::ICudaEngine> prediction_engine{nullptr};
-    VizgardUniquePtr<nvinfer1::IExecutionContext> prediction_context{nullptr};
+  protected:
+    EmoiOnnxParser onnxParser;
+    EmoiUniquePtr<nvinfer1::INetworkDefinition> prediction_network;
+    EmoiUniquePtr<nvinfer1::ICudaEngine> prediction_engine{ nullptr };
+    EmoiUniquePtr<nvinfer1::IExecutionContext> prediction_context{ nullptr };
 
-    IVizgardLogger iVLogger = IVizgardLogger();
+    IEmoiLogger iVLogger = IEmoiLogger();
     int batch_size = 1;
     std::vector<nvinfer1::Dims> prediction_input_dims;
     std::vector<nvinfer1::Dims> prediction_output_dims;
 
-    std::vector<void *> input_buffers; // buffers for input and output data
-    std::vector<void *> output_buffers;
+    std::vector<void*> input_buffers; // buffers for input and output data
+    std::vector<void*> output_buffers;
 
     cudaStream_t stream;
     int maxBatchSize;
@@ -135,8 +119,9 @@ protected:
     int getMaxBatchSize();
     bool clearBuffer(bool freeInput = true, bool freeOutput = true);
 
-public:
-    TrtExec(const OnnxParserConfig &info) : info{info}
+  public:
+    TrtExec(const OnnxParserConfig& info)
+        : info{ info }
     {
         cudaStreamCreate(&stream);
     }
@@ -144,9 +129,9 @@ public:
     ~TrtExec()
     {
         cudaStreamDestroy(stream);
-        for (void *buf : output_buffers)
+        for (void* buf : output_buffers)
             cudaFree(buf);
-        for (void *buf : input_buffers)
+        for (void* buf : input_buffers)
             cudaFree(buf);
         this->prediction_context.reset();
         this->prediction_engine.reset();
@@ -155,58 +140,56 @@ public:
     }
 
     /*virtual*/ bool parseOnnxModel();
-    /*virtual*/ bool saveEngine(const std::string &fileName);
-    /*virtual*/ bool loadEngine(const std::string &fileName);
+    /*virtual*/ bool saveEngine(const std::string& fileName);
+    /*virtual*/ bool loadEngine(const std::string& fileName);
 
-private:
+  private:
     OnnxParserConfig info;
 };
 
-namespace VizgardTrt
+namespace EmoiTrt {
+inline int64_t volume(const nvinfer1::Dims& d)
 {
-    inline int64_t volume(const nvinfer1::Dims &d)
-    {
-        return std::accumulate(d.d, d.d + d.nbDims, 1, std::multiplies<int64_t>());
-    }
+    return std::accumulate(d.d, d.d + d.nbDims, 1, std::multiplies<int64_t>());
+}
 
-    inline std::string log_cuda_bf(nvinfer1::Dims const &dim_shape, void *cuda_buffer, int number_p)
-    {
-        std::ostringstream oss;
-        if (!cuda_buffer)
-            oss << "Null cuda buffer !" << std::endl;
-        oss << "Buffer size: ";
-        for (size_t i = 0; i < dim_shape.nbDims - 1; ++i)
-            oss << dim_shape.d[i] << "x";
-        oss << dim_shape.d[dim_shape.nbDims - 1] << ".  Some elements: ";
-        int64_t v = volume(dim_shape);
-        std::vector<float> cpu_output(v > 0 ? v : -v);
-        cudaMemcpy(cpu_output.data(), (float *)cuda_buffer, cpu_output.size() * sizeof(float), cudaMemcpyDeviceToHost);
-        for (int i = 0; i < number_p; i++)
-            oss << cpu_output[i] << " ";
-        oss << std::endl;
-        return oss.str();
-    }
+inline std::string log_cuda_bf(nvinfer1::Dims const& dim_shape, void* cuda_buffer, int number_p)
+{
+    std::ostringstream oss;
+    if (!cuda_buffer)
+        oss << "Null cuda buffer !" << std::endl;
+    oss << "Buffer size: ";
+    for (size_t i = 0; i < dim_shape.nbDims - 1; ++i)
+        oss << dim_shape.d[i] << "x";
+    oss << dim_shape.d[dim_shape.nbDims - 1] << ".  Some elements: ";
+    int64_t v = volume(dim_shape);
+    std::vector<float> cpu_output(v > 0 ? v : -v);
+    cudaMemcpy(cpu_output.data(), (float*)cuda_buffer, cpu_output.size() * sizeof(float), cudaMemcpyDeviceToHost);
+    for (int i = 0; i < number_p; i++)
+        oss << cpu_output[i] << " ";
+    oss << std::endl;
+    return oss.str();
+}
 
-    inline std::string log_cuda_bf(size_t len, void *cuda_buffer, int number_p)
-    {
-        std::ostringstream oss;
-        if (!cuda_buffer)
-            oss << "Null buffer !" << std::endl;
-        oss << "Buffer size: ";
-        oss << "[ " << len << " ]"
-            << ".  Some elements: ";
-        std::vector<float> cpu_output(len);
-        cudaMemcpy(cpu_output.data(), (float *)cuda_buffer, cpu_output.size() * sizeof(float), cudaMemcpyDeviceToHost);
-        for (int i = 0; i < number_p; i++)
-            oss << cpu_output[i] << " ";
-        oss << std::endl;
-        return oss.str();
-    }
+inline std::string log_cuda_bf(size_t len, void* cuda_buffer, int number_p)
+{
+    std::ostringstream oss;
+    if (!cuda_buffer)
+        oss << "Null buffer !" << std::endl;
+    oss << "Buffer size: ";
+    oss << "[ " << len << " ]"
+        << ".  Some elements: ";
+    std::vector<float> cpu_output(len);
+    cudaMemcpy(cpu_output.data(), (float*)cuda_buffer, cpu_output.size() * sizeof(float), cudaMemcpyDeviceToHost);
+    for (int i = 0; i < number_p; i++)
+        oss << cpu_output[i] << " ";
+    oss << std::endl;
+    return oss.str();
+}
 
-    inline unsigned int getElementSize(nvinfer1::DataType t)
-    {
-        switch (t)
-        {
+inline unsigned int getElementSize(nvinfer1::DataType t)
+{
+    switch (t) {
         case nvinfer1::DataType::kINT32:
             return 4;
         case nvinfer1::DataType::kFLOAT:
@@ -216,9 +199,9 @@ namespace VizgardTrt
         case nvinfer1::DataType::kBOOL:
         case nvinfer1::DataType::kINT8:
             return 1;
-        }
-        throw std::runtime_error("Invalid DataType.");
-        return 0;
     }
+    throw std::runtime_error("Invalid DataType.");
+    return 0;
 }
+} // namespace EmoiTrt
 #endif // TRT_EXEC_H

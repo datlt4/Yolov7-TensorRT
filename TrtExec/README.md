@@ -107,8 +107,8 @@
 
 
 ./TrtExec-bin \
-    --onnx /mnt/4B323B9107F693E2/TensorRT/yolov7/weights/vizgard-yolov7.onnx \
-    --engine /mnt/4B323B9107F693E2/TensorRT/yolov7/weights/vizgard-yolov7.engine \
+    --onnx /mnt/4B323B9107F693E2/TensorRT/yolov7/weights/yolov7.onnx \
+    --engine /mnt/4B323B9107F693E2/TensorRT/yolov7/weights/yolov7.engine \
     --inputName "images" \
     --minShape 1x3x640x640 \
     --optShape 1x3x640x640 \

@@ -1,21 +1,29 @@
-#include <iostream>
-#include "Yolov7TensorRT.h"
+#include "Trtexec.h"
 
-VizgardLogger::Logger *vizgardLogger = VizgardLogger::LoggerFactory::CreateConsoleLogger(VizgardLogger::INFO);
+EmoiLogger::Logger* emoiLogger = EmoiLogger::LoggerFactory::CreateConsoleLogger(EmoiLogger::INFO);
 
-int main(int argc, char **argv)
+// ./Trtexec \
+//     --onnx model.onnx \
+//     --engine model.engine \
+//     --inputName "input" \
+//     --minShape 1x3x256x192 \
+//     --optShape 8x3x256x192 \
+//     --maxShape 32x3x256x192 \
+//     --workspace 1024
+//     --dynamicOnnx
+
+int main(int argc, char** argv)
 {
-
-    Yolov7TRT yolov7;
-    yolov7.LoadEngine("./yolov7.engine");
-
-    cv::Mat image_bgr = cv::imread("./person.jpg");
-    std::vector<bbox_t> boxes = yolov7.EngineInference(image_bgr);
-    std::cout << TAGLINE << boxes.size() << std::endl;
-    for (bbox_t &b : boxes)
-    {
-        cv::rectangle(image_bgr, cv::Rect2f(b.x, b.y, b.w, b.h), cv::Scalar(0, 0, 255), 2);
-    }
-    cv::imwrite("saved.jpg", image_bgr);
-    return 0;
+    OnnxParserConfig config;
+    if (ParseCommandLine(argc, argv, config)) {
+        std::unique_ptr<TrtExec> executor = std::make_unique<TrtExec>(config);
+        std::cout << config << std::endl;
+        // if (config.dynamic)
+        {
+            executor->parseOnnxModel();
+            executor->saveEngine(config.engine_dir);
+        }
+        VLOG(INFO) << "[ PASSED ]:\n" << config << std::endl;
+    } else
+        VLOG(ERROR) << "[ ERROR ] STOP!!!" << std::endl;
 }

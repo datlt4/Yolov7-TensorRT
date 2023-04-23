@@ -1,29 +1,28 @@
-#include "Trtexec.h"
+#include "Yolov7TensorRT.h"
+#include <chrono>
+#include <iostream>
 
 EmoiLogger::Logger* emoiLogger = EmoiLogger::LoggerFactory::CreateConsoleLogger(EmoiLogger::INFO);
 
-// ./Trtexec \
-//     --onnx model.onnx \
-//     --engine model.engine \
-//     --inputName "input" \
-//     --minShape 1x3x256x192 \
-//     --optShape 8x3x256x192 \
-//     --maxShape 32x3x256x192 \
-//     --workspace 1024
-//     --dynamicOnnx
-
 int main(int argc, char** argv)
 {
-    OnnxParserConfig config;
-    if (ParseCommandLine(argc, argv, config)) {
-        std::unique_ptr<TrtExec> executor = std::make_unique<TrtExec>(config);
-        std::cout << config << std::endl;
-        // if (config.dynamic)
-        {
-            executor->parseOnnxModel();
-            executor->saveEngine(config.engine_dir);
-        }
-        VLOG(INFO) << "[ PASSED ]:\n" << config << std::endl;
-    } else
-        VLOG(ERROR) << "[ ERROR ] STOP!!!" << std::endl;
+
+    Yolov7TRT yolov7;
+    yolov7.LoadEngine("../yolov7-80-class-fp16.engine");
+
+    cv::Mat image_bgr = cv::imread("../yolo-test.jpg");
+    std::cout << image_bgr.cols << "  " << image_bgr.rows;
+    std::vector<bbox_t> boxes;
+    for (int i = 0; i < 100; ++i) {
+        auto start = std::chrono::high_resolution_clock::now(); // Get current time
+        boxes = yolov7.EngineInference(image_bgr);
+        auto end = std::chrono::high_resolution_clock::now();            // Get current time
+        std::chrono::duration<double, std::milli> elapsed = end - start; // Calculate elapsed time
+        std::cout << "Elapsed time: " << elapsed.count() << " ms\n";     // Print elapsed time in milliseconds
+    }
+    for (bbox_t& b : boxes) {
+        cv::rectangle(image_bgr, cv::Rect2f(b.x, b.y, b.w, b.h), cv::Scalar(0, 0, 255), 2);
+    }
+    cv::imwrite("saved.jpg", image_bgr);
+    return 0;
 }

@@ -4,8 +4,7 @@
 
 struct bbox_t
 {
-    float x, y, w,
-        h;             // (x,y) - top-left corner, (w, h) - width & height of bounded box
+    float x, y, w, h;  // (x,y) - top-left corner, (w, h) - width & height of bounded box
     float prob;        // confidence - probability that the object was found correctly
     int obj_id;        // class of object - from range [0, classes-1]
     int track_id = -1; // tracking id for video (0 - untracked, 1 - inf - tracked object)

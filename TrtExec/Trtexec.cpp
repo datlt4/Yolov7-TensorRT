@@ -45,7 +45,7 @@ bool TrtExec::parseOnnxModel()
     if (info.int8) {
         config->setFlag(nvinfer1::BuilderFlag::kINT8);
         std::vector<std::string> fileNames = {};
-        std::unique_ptr<Int8Calibrator> calibrator(new Int8Calibrator(fileNames, info.maxBatchSize, info.maxImageChannel, info.maxImageHeight, info.maxImageWidth)); // = std::make_unique(new Int8Calibrator());
+        std::unique_ptr<Int8Calibrator> calibrator(new Int8Calibrator("/root/Software/Yolov7-TensorRT/val2017/*.jpg", info.maxBatchSize, info.maxImageChannel, info.maxImageHeight, info.maxImageWidth)); // = std::make_unique(new Int8Calibrator());
         config->setInt8Calibrator(calibrator.get());
     }
     this->prediction_engine.reset(builder->buildEngineWithConfig(*prediction_network, *config));

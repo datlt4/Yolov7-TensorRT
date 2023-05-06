@@ -9,33 +9,40 @@
 #include <opencv2/opencv.hpp>
 #include <sstream>
 #include <vector>
+#include <glob.h>
 
 // Define a custom data loader for your data
 class Int8Calibrator : public nvinfer1::IInt8EntropyCalibrator2
 {
   public:
-    Int8Calibrator(std::vector<std::string> fileNames, int batchSize, int inputH, int inputW, int inputC)
-        : mFileNames(fileNames)
-        , mBatchSize(batchSize)
+    Int8Calibrator(std::string filenamePattern, int batchSize, int inputH, int inputW, int inputC)
+        : mBatchSize(batchSize)
         , mInputH(inputH)
         , mInputW(inputW)
         , mInputC(inputC)
     {
+        if (glob(filenamePattern.c_str(), 0, NULL, &glob_result) != 0)
+        {
+            // handle error
+        }
         mCurBatchData = new float[mBatchSize * mInputH * mInputW * mInputC];
     }
 
-    virtual ~Int8Calibrator() { delete[] mCurBatchData; }
+    virtual ~Int8Calibrator() {
+        globfree(&glob_result);
+        delete[] mCurBatchData; 
+    }
 
     int getBatchSize() const noexcept override { return mBatchSize; }
 
     bool getBatch(void* bindings[], const char* names[], int nbBindings) noexcept override
     {
-        if (mCurBatch + mBatchSize > (int)mFileNames.size()) {
+        if (mCurBatch + mBatchSize > glob_result.gl_pathc) {
             return false;
         }
 
         for (int i = 0; i < mBatchSize; i++) {
-            const std::string inputFileName = mFileNames[mCurBatch++];
+            const std::string inputFileName = glob_result.gl_pathv[mCurBatch++];
             readImageData(inputFileName, &mCurBatchData[i * mInputH * mInputW * mInputC]);
         }
 
@@ -67,7 +74,7 @@ class Int8Calibrator : public nvinfer1::IInt8EntropyCalibrator2
     }
 
   private:
-    std::vector<std::string> mFileNames;
+    glob_t glob_result;
     int mBatchSize{ 0 };
     int mInputH{ 0 };
     int mInputW{ 0 };

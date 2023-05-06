@@ -22,7 +22,7 @@ int main(int argc, char** argv)
     std::cout << image_bgr.cols << "  " << image_bgr.rows;
     std::vector<bbox_t> boxes;
     for (int i = 0; i < 100; ++i) {
-        auto start = std::chrono::high_resolution_clock::now(); // Get current time
+        auto start = std::chrono::high_resolution_clock::now();          // Get current time
         boxes = yolov7.EngineInference(image_bgr);
         auto end = std::chrono::high_resolution_clock::now();            // Get current time
         std::chrono::duration<double, std::milli> elapsed = end - start; // Calculate elapsed time

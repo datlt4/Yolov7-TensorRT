@@ -20,13 +20,13 @@ python export.py --weights ./yolov7.pt --grid --simplify --img-size 640 640
 ```bash
 cd build/TrtExec
 ./TrtExec-bin \
-    --onnx ./weights/yolov7.onnx \
-    --engine ./weights/yolov7.engine \
+    --onnx /root/Software/Yolov7-TensorRT/yolov7-80-class.onnx \
+    --engine /root/Software/Yolov7-TensorRT/yolov7-80-class-fp16.engine \
     --inputName "images" \
     --minShape 1x3x640x640 \
     --optShape 1x3x640x640 \
     --maxShape 1x3x640x640 \
-    --workspace 1024
+    --workspace 2048
 ```
 
 # Result

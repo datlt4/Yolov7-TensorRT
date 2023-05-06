@@ -14,7 +14,6 @@ Yolov7TRT::Yolov7TRT()
     for (const std::vector<int>& grid : grids) {
         refer_rows += std::accumulate(grid.begin(), grid.end(), 1, std::multiplies<int>());
     }
-    std::cout << TAGLINE << "refer_rows: " << refer_rows << std::endl;
     GenerateReferMatrix();
 }
 

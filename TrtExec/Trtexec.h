@@ -41,9 +41,16 @@ struct OnnxParserConfig
     std::string onnx_dir;
     std::string engine_dir;
     bool dynamicOnnx{ false };
+    bool int8{ false };
     friend std::ostream& operator<<(std::ostream& os, const OnnxParserConfig config)
     {
-        os << "  --onnx         : " << config.onnx_dir << std::endl << "  --engine       : " << config.engine_dir << std::endl << "  --minShape     : " << config.minBatchSize << "x" << config.minImageChannel << "x" << config.minImageHeight << "x" << config.minImageWidth << std::endl << "  --optShape     : " << config.optBatchSize << "x" << config.optImageChannel << "x" << config.optImageHeight << "x" << config.optImageWidth << std::endl << "  --maxShape     : " << config.maxBatchSize << "x" << config.maxImageChannel << "x" << config.maxImageHeight << "x" << config.maxImageWidth << std::endl << "  --dynamicOnnx  : " << (config.dynamicOnnx ? "True" : "False") << std::endl;
+        os << "  --onnx         : " << config.onnx_dir << std::endl 
+        << "  --engine       : " << config.engine_dir << std::endl 
+        << "  --minShape     : " << config.minBatchSize << "x" << config.minImageChannel << "x" << config.minImageHeight << "x" << config.minImageWidth << std::endl
+        << "  --optShape     : " << config.optBatchSize << "x" << config.optImageChannel << "x" << config.optImageHeight << "x" << config.optImageWidth << std::endl
+        << "  --maxShape     : " << config.maxBatchSize << "x" << config.maxImageChannel << "x" << config.maxImageHeight << "x" << config.maxImageWidth << std::endl
+        << "  --dynamicOnnx  : " << (config.dynamicOnnx ? "True" : "False") << std::endl
+        << "  --int8  : " << (config.int8 ? "True" : "False") << std::endl;
         return os;
     }
 };

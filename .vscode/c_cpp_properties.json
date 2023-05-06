@@ -7,9 +7,9 @@
                 "/usr/local/cuda/include/**",
                 "/usr/include/**",
                 "/usr/local/include/**",
-                "/usr/local/cuda/targets/x86_64-linux/include/**",
-                "/usr/local/TensorRT/include/**",
                 "./Yolov7Trt/**",
+                // "/usr/local/cuda/targets/x86_64-linux/include/**",
+                // "/usr/local/TensorRT/include/**",
                 "./**"
             ],
             "browse":
@@ -20,9 +20,9 @@
                     "/usr/local/cuda/include/**",
                     "/usr/include/**",
                     "/usr/local/include/**",
-                    "/usr/local/cuda/targets/x86_64-linux/include/**",
-                    "/usr/local/TensorRT/include/**",
                     "./Yolov7Trt/**",
+                    // "/usr/local/cuda/targets/x86_64-linux/include/**",
+                    // "/usr/local/TensorRT/include/**",
                     "./**"
                 ],
                 "limitSymbolsToIncludedHeaders": false

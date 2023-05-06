@@ -1,4 +1,5 @@
 #include "Trtexec.h"
+#include "calibrator.h"
 
 bool TrtExec::parseOnnxModel()
 {
@@ -16,13 +17,17 @@ bool TrtExec::parseOnnxModel()
         return false;
     }
     EmoiUniquePtr<nvinfer1::IBuilderConfig> config{ builder->createBuilderConfig() };
-    if (!config) {
+    if (!config)
+
+    {
         VLOG(ERROR) << "Create builder config failed.";
         return false;
     }
-    config->setFlag(nvinfer1::BuilderFlag::kFP16);
+
     // allow TensorRT to use up to 1GB of GPU memory for tactic selection.
     config->setMaxWorkspaceSize(info.workspace);
+    config->setFlag(nvinfer1::BuilderFlag::kFP16);
+    config->setFlag(nvinfer1::BuilderFlag::kGPU_FALLBACK);
     if (info.dynamicOnnx) {
         builder->setMaxBatchSize(info.maxBatchSize);
         // generate TensorRT engine optimized for the target platform
@@ -35,6 +40,13 @@ bool TrtExec::parseOnnxModel()
         config->addOptimizationProfile(profileCalib);
     } else {
         builder->setMaxBatchSize(1);
+    }
+
+    if (info.int8) {
+        config->setFlag(nvinfer1::BuilderFlag::kINT8);
+        std::vector<std::string> fileNames = {};
+        std::unique_ptr<Int8Calibrator> calibrator(new Int8Calibrator(fileNames, info.maxBatchSize, info.maxImageChannel, info.maxImageHeight, info.maxImageWidth)); // = std::make_unique(new Int8Calibrator());
+        config->setInt8Calibrator(calibrator.get());
     }
     this->prediction_engine.reset(builder->buildEngineWithConfig(*prediction_network, *config));
     this->prediction_context.reset(this->prediction_engine->createExecutionContext());
@@ -166,9 +178,7 @@ bool ParseCommandLine(int argc, char* argv[], OnnxParserConfig& config)
             if (++i == argc) {
                 ShowHelpAndExit("--onnx");
                 return false;
-            }
-
-            else
+            } else
                 config.onnx_dir = std::string(argv[i]);
             continue;
         } else if (std::string(argv[i]) == std::string("--engine")) {
@@ -187,6 +197,10 @@ bool ParseCommandLine(int argc, char* argv[], OnnxParserConfig& config)
             continue;
         } else if (std::string(argv[i]) == std::string("--dynamicOnnx")) {
             config.dynamicOnnx = true;
+            continue;
+        } else if (std::string(argv[i]) == std::string("--int8")) {
+            config.int8 = true;
+            continue;
         } else if (std::string(argv[i]) == std::string("--minShape")) {
             if (++i == argc) {
                 ShowHelpAndExit("--minShape");
@@ -258,6 +272,7 @@ bool ParseCommandLine(int argc, char* argv[], OnnxParserConfig& config)
                 config.workspace = std::stoi(argv[i]) * (1ULL << 20);
             continue;
         } else {
+
             {
                 ShowHelpAndExit((std::string("input not include ") + std::string(argv[i])).c_str());
                 return false;

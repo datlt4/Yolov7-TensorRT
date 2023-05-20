@@ -17,9 +17,10 @@
 #include <numeric>
 #include <opencv2/opencv.hpp>
 #include <vector>
+#include "calibrator.h"
 
 #ifndef TAGLINE
-#define TAGLINE "\t<L" << __LINE__ << "> "
+#define TAGLINE "\t< " << __FUNCTION__ << " - " << __FILE__ << ":" << __LINE__ << " > "
 #endif // TAGLINE
 
 struct OnnxParserConfig
@@ -42,15 +43,10 @@ struct OnnxParserConfig
     std::string engine_dir;
     bool dynamicOnnx{ false };
     bool int8{ false };
+    std::string dataForCalibration{ "" };
     friend std::ostream& operator<<(std::ostream& os, const OnnxParserConfig config)
     {
-        os << "  --onnx         : " << config.onnx_dir << std::endl 
-        << "  --engine       : " << config.engine_dir << std::endl 
-        << "  --minShape     : " << config.minBatchSize << "x" << config.minImageChannel << "x" << config.minImageHeight << "x" << config.minImageWidth << std::endl
-        << "  --optShape     : " << config.optBatchSize << "x" << config.optImageChannel << "x" << config.optImageHeight << "x" << config.optImageWidth << std::endl
-        << "  --maxShape     : " << config.maxBatchSize << "x" << config.maxImageChannel << "x" << config.maxImageHeight << "x" << config.maxImageWidth << std::endl
-        << "  --dynamicOnnx  : " << (config.dynamicOnnx ? "True" : "False") << std::endl
-        << "  --int8  : " << (config.int8 ? "True" : "False") << std::endl;
+        os << "  --onnx         : " << config.onnx_dir << std::endl << "  --engine       : " << config.engine_dir << std::endl << "  --minShape     : " << config.minBatchSize << "x" << config.minImageChannel << "x" << config.minImageHeight << "x" << config.minImageWidth << std::endl << "  --optShape     : " << config.optBatchSize << "x" << config.optImageChannel << "x" << config.optImageHeight << "x" << config.optImageWidth << std::endl << "  --maxShape     : " << config.maxBatchSize << "x" << config.maxImageChannel << "x" << config.maxImageHeight << "x" << config.maxImageWidth << std::endl << "  --dynamicOnnx  : " << (config.dynamicOnnx ? "True" : "False") << std::endl << "  --int8  : " << (config.int8 ? "True" : "False") << std::endl;
         return os;
     }
 };
@@ -108,6 +104,7 @@ class TrtExec
     EmoiUniquePtr<nvinfer1::INetworkDefinition> prediction_network;
     EmoiUniquePtr<nvinfer1::ICudaEngine> prediction_engine{ nullptr };
     EmoiUniquePtr<nvinfer1::IExecutionContext> prediction_context{ nullptr };
+    std::unique_ptr<Int8Calibrator> calibrator{ nullptr };
 
     IEmoiLogger iVLogger = IEmoiLogger();
     int batch_size = 1;

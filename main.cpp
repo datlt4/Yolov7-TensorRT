@@ -26,11 +26,12 @@ int main(int argc, char** argv)
         boxes = yolov7.EngineInference(image_bgr);
         auto end = std::chrono::high_resolution_clock::now();            // Get current time
         std::chrono::duration<double, std::milli> elapsed = end - start; // Calculate elapsed time
-        std::cout << "Elapsed time: " << elapsed.count() << " ms\n";     // Print elapsed time in milliseconds
+        std::cout << "Elapsed time: " << i << " - " << elapsed.count() << " ms\n";     // Print elapsed time in milliseconds
     }
     for (bbox_t& b : boxes) {
         cv::rectangle(image_bgr, cv::Rect2f(b.x, b.y, b.w, b.h), scalars[b.obj_id], 2);
     }
     cv::imwrite("saved.jpg", image_bgr);
+
     return 0;
 }

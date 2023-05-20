@@ -1,5 +1,4 @@
 #include "Trtexec.h"
-#include "calibrator.h"
 
 bool TrtExec::parseOnnxModel()
 {
@@ -26,8 +25,8 @@ bool TrtExec::parseOnnxModel()
 
     // allow TensorRT to use up to 1GB of GPU memory for tactic selection.
     config->setMaxWorkspaceSize(info.workspace);
-    config->setFlag(nvinfer1::BuilderFlag::kFP16);
-    config->setFlag(nvinfer1::BuilderFlag::kGPU_FALLBACK);
+    //config->setFlag(nvinfer1::BuilderFlag::kFP16);
+    //config->setFlag(nvinfer1::BuilderFlag::kGPU_FALLBACK);
     if (info.dynamicOnnx) {
         builder->setMaxBatchSize(info.maxBatchSize);
         // generate TensorRT engine optimized for the target platform
@@ -44,12 +43,15 @@ bool TrtExec::parseOnnxModel()
 
     if (info.int8) {
         config->setFlag(nvinfer1::BuilderFlag::kINT8);
-        std::vector<std::string> fileNames = {};
-        std::unique_ptr<Int8Calibrator> calibrator(new Int8Calibrator("/root/Software/Yolov7-TensorRT/val2017/*.jpg", info.maxBatchSize, info.maxImageChannel, info.maxImageHeight, info.maxImageWidth)); // = std::make_unique(new Int8Calibrator());
+        calibrator = std::make_unique<Int8Calibrator>(info.dataForCalibration, info.maxBatchSize, info.maxImageChannel, info.maxImageHeight, info.maxImageWidth); // = std::make_unique(new Int8Calibrator());
         config->setInt8Calibrator(calibrator.get());
+        std::cout << TAGLINE << std::endl;
     }
+    std::cout << TAGLINE << std::endl;
     this->prediction_engine.reset(builder->buildEngineWithConfig(*prediction_network, *config));
+    std::cout << TAGLINE << std::endl;
     this->prediction_context.reset(this->prediction_engine->createExecutionContext());
+    std::cout << TAGLINE << std::endl;
     return true;
 }
 
@@ -270,6 +272,13 @@ bool ParseCommandLine(int argc, char* argv[], OnnxParserConfig& config)
                 return false;
             } else
                 config.workspace = std::stoi(argv[i]) * (1ULL << 20);
+            continue;
+        } else if (std::string(argv[i]) == std::string("--dataset")) {
+            if (++i == argc) {
+                ShowHelpAndExit("--dataset");
+                return false;
+            } else
+                config.dataForCalibration = std::string(argv[i]);
             continue;
         } else {
 

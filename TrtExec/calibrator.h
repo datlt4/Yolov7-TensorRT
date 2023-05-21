@@ -23,9 +23,9 @@ class Int8Calibrator : public nvinfer1::IInt8EntropyCalibrator2
   public:
     Int8Calibrator(std::string filenamePattern, int batchSize, int inputC, int inputH, int inputW)
         : mBatchSize(batchSize)
+        , mInputC(inputC)
         , mInputH(inputH)
         , mInputW(inputW)
-        , mInputC(inputC)
     {
         std::cout << TAGLINE << std::endl;
         if (glob(filenamePattern.c_str(), 0, NULL, &glob_result) != 0) {
@@ -85,6 +85,19 @@ class Int8Calibrator : public nvinfer1::IInt8EntropyCalibrator2
         return true;
     }
 
+    bool getBatch(float* mCurBatchData)
+    {
+        if (mCurBatch + mBatchSize > glob_result.gl_pathc) {
+            return false;
+        }
+        for (int i = 0; i < mBatchSize; i++) {
+            const std::string inputFileName = glob_result.gl_pathv[mCurBatch++];
+            std::cout << i << " : " << inputFileName << std::endl;
+            readImageData(inputFileName, &mCurBatchData[i * mInputH * mInputW * mInputC]);
+        }
+        return true;
+    }
+
     const void* readCalibrationCache(std::size_t& length) noexcept override
     {
         std::cout << TAGLINE << std::endl;
@@ -117,7 +130,7 @@ class Int8Calibrator : public nvinfer1::IInt8EntropyCalibrator2
     void writeCalibrationCache(const void* ptr, std::size_t length) noexcept override
     {
         std::cout << TAGLINE << std::endl;
-        std::ofstream cacheFile("calibration.cache", std::ios::binary);
+        std::ofstream cacheFile("calibration.cache", std::ios::binary | std::ios::app);
         if (cacheFile.good()) {
             // Write the cache data to the file
             cacheFile.write(reinterpret_cast<const char*>(ptr), length);
@@ -127,6 +140,7 @@ class Int8Calibrator : public nvinfer1::IInt8EntropyCalibrator2
             std::cerr << "Failed to open calibration cache file for writing." << std::endl;
         }
     }
+
 
   private:
     glob_t glob_result;
@@ -141,7 +155,6 @@ class Int8Calibrator : public nvinfer1::IInt8EntropyCalibrator2
   public:
     void readImageData(const std::string& fileName, float* data)
     {
-        std::cout << TAGLINE << std::endl;
         // TODO: Implement image reading and preprocessing here
         cv::Mat img = cv::imread(fileName);
 
@@ -164,7 +177,6 @@ class Int8Calibrator : public nvinfer1::IInt8EntropyCalibrator2
         std::vector<cv::Mat> split_img = { cv::Mat(mInputH, mInputW, CV_32FC1, data + channelLength * 2), cv::Mat(mInputH, mInputW, CV_32FC1, data + channelLength), cv::Mat(mInputH, mInputW, CV_32FC1, data) };
 
         cv::split(flt_img, split_img);
-        std::cout << TAGLINE << std::endl;
     }
 
     void* allocateGPUMemory(size_t size)

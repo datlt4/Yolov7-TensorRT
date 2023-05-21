@@ -15,6 +15,7 @@ bool TrtExec::parseOnnxModel()
         VLOG(ERROR) << "ERROR: could not parse the model.";
         return false;
     }
+    std::cout << "getNbInputs: " << prediction_network->getNbInputs() << " - " << prediction_network->getInput(0) << "  getNbOutputs:" << prediction_network->getNbOutputs() << std::endl;
     EmoiUniquePtr<nvinfer1::IBuilderConfig> config{ builder->createBuilderConfig() };
     if (!config)
 
@@ -25,8 +26,10 @@ bool TrtExec::parseOnnxModel()
 
     // allow TensorRT to use up to 1GB of GPU memory for tactic selection.
     config->setMaxWorkspaceSize(info.workspace);
-    //config->setFlag(nvinfer1::BuilderFlag::kFP16);
-    //config->setFlag(nvinfer1::BuilderFlag::kGPU_FALLBACK);
+    if (!info.int8) {
+        config->setFlag(nvinfer1::BuilderFlag::kFP16);
+        config->setFlag(nvinfer1::BuilderFlag::kGPU_FALLBACK);
+    }
     if (info.dynamicOnnx) {
         builder->setMaxBatchSize(info.maxBatchSize);
         // generate TensorRT engine optimized for the target platform
@@ -47,6 +50,8 @@ bool TrtExec::parseOnnxModel()
         config->setInt8Calibrator(calibrator.get());
         std::cout << TAGLINE << std::endl;
     }
+    std::cout << TAGLINE << std::endl;
+    builder->buildEngineWithConfig(*prediction_network, *config);
     std::cout << TAGLINE << std::endl;
     this->prediction_engine.reset(builder->buildEngineWithConfig(*prediction_network, *config));
     std::cout << TAGLINE << std::endl;

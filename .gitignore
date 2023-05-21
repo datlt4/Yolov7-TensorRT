@@ -13,6 +13,7 @@ __pycache__/
 *.onnx
 *.zip
 val2017/
+val2017-0/
 
 # Ignore CMake and Visual Studio build directories
 CMakeFiles/

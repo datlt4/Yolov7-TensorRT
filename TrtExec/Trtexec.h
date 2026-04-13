@@ -61,7 +61,16 @@ struct EmoiDestroyPtr
     void operator()(T* obj) const
     {
         if (obj != nullptr) {
+#if NV_TENSORRT_MAJOR >= 10
+            // TensorRT 10+ uses standard delete
+            delete obj;
+#else
+            // TensorRT 8.x and earlier use destroy()
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             obj->destroy();
+#pragma GCC diagnostic pop
+#endif
         }
     }
 };

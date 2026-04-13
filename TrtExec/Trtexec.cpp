@@ -22,9 +22,17 @@ bool TrtExec::parseOnnxModel()
     }
     config->setFlag(nvinfer1::BuilderFlag::kFP16);
     // allow TensorRT to use up to 1GB of GPU memory for tactic selection.
+#if NV_TENSORRT_MAJOR >= 10
+    config->setMemoryPoolLimit(nvinfer1::MemoryPoolType::kWORKSPACE, info.workspace);
+#else
     config->setMaxWorkspaceSize(info.workspace);
+#endif
+
     if (info.dynamicOnnx) {
+#if NV_TENSORRT_MAJOR < 10
+        // Legacy implicit batch builder constraint (deprecated in TensorRT 10)
         builder->setMaxBatchSize(info.maxBatchSize);
+#endif
         // generate TensorRT engine optimized for the target platform
         nvinfer1::IOptimizationProfile* profileCalib = builder->createOptimizationProfile();
         // We do not need to check the return of setDimension and
@@ -34,7 +42,10 @@ bool TrtExec::parseOnnxModel()
         profileCalib->setDimensions(info.inputName.c_str(), nvinfer1::OptProfileSelector::kMAX, nvinfer1::Dims4{ info.maxBatchSize, info.maxImageChannel, info.maxImageHeight, info.maxImageWidth });
         config->addOptimizationProfile(profileCalib);
     } else {
+#if NV_TENSORRT_MAJOR < 10
+        // Legacy implicit batch builder constraint (deprecated in TensorRT 10)
         builder->setMaxBatchSize(1);
+#endif
     }
     this->prediction_engine.reset(builder->buildEngineWithConfig(*prediction_network, *config));
     this->prediction_context.reset(this->prediction_engine->createExecutionContext());
@@ -77,30 +88,61 @@ bool TrtExec::loadEngine(const std::string& fileName)
     }
 
     EmoiUniquePtr<nvinfer1::IRuntime> runtime{ nvinfer1::createInferRuntime(iVLogger.getTRTLogger()) };
+#if NV_TENSORRT_MAJOR >= 10
+    this->prediction_engine.reset(runtime->deserializeCudaEngine(engineData.data(), fsize));
+#else
     this->prediction_engine.reset(runtime->deserializeCudaEngine(engineData.data(), fsize, nullptr));
+#endif
     this->prediction_context.reset(this->prediction_engine->createExecutionContext());
+#if NV_TENSORRT_MAJOR < 10
     this->maxBatchSize = this->prediction_engine->getMaxBatchSize();
+#else
+    // TensorRT 10+ uses explicit batch, maxBatchSize is not applicable
+    this->maxBatchSize = 1;
+#endif
     return this->prediction_engine != nullptr;
 }
 
+#if NV_TENSORRT_MAJOR > 8 || (NV_TENSORRT_MAJOR == 8 && NV_TENSORRT_MINOR >= 5)
+int32_t TrtExec::getBindingCount()
+{
+    return this->prediction_engine->getNbIOTensors();
+}
+#else
 int32_t TrtExec::getNbBindings()
 {
     return this->prediction_engine->getNbBindings();
 }
+#endif
 
 nvinfer1::Dims TrtExec::getBindingDimensions(int32_t bindingIndex)
 {
-    return this->prediction_engine->getBindingDimensions(bindingIndex);
+#if NV_TENSORRT_MAJOR > 8 || (NV_TENSORRT_MAJOR == 8 && NV_TENSORRT_MINOR >= 5)
+        const char* tensor_name = this->prediction_engine->getIOTensorName(bindingIndex);
+        return this->prediction_engine->getTensorShape(tensor_name);
+#else
+        return this->prediction_engine->getBindingDimensions(bindingIndex);
+#endif
 }
 
 nvinfer1::DataType TrtExec::getBindingDataType(int32_t bindingIndex)
 {
+#if NV_TENSORRT_MAJOR > 8 || (NV_TENSORRT_MAJOR == 8 && NV_TENSORRT_MINOR >= 5)
+    const char* tensor_name = this->prediction_engine->getIOTensorName(bindingIndex);
+    return this->prediction_engine->getTensorDataType(tensor_name);
+#else
     return this->prediction_engine->getBindingDataType(bindingIndex);
+#endif
 }
 
 int TrtExec::getMaxBatchSize()
 {
+#if NV_TENSORRT_MAJOR < 10
     return this->prediction_engine->getMaxBatchSize();
+#else
+    // TensorRT 10+ uses explicit batch, return default
+    return this->maxBatchSize;
+#endif
 }
 
 bool TrtExec::clearBuffer(bool freeInput, bool freeOutput)

@@ -37,8 +37,26 @@ std::vector<bbox_t> Yolov7TRT::EngineInference(cv::Mat& image)
     std::vector<void*> predicitonBindings = { (float*)input_buffers[0], (float*)output_buffers[0] };
     // VLOG(INFO) << "Input " << log_cuda_bf(prediction_input_dims[0],
     // predicitonBindings[0], 100);
+#if NV_TENSORRT_MAJOR > 8 || (NV_TENSORRT_MAJOR == 8 && NV_TENSORRT_MINOR >= 5)
+    this->prediction_context->setInputShape(this->prediction_engine->getIOTensorName(0), nvinfer1::Dims4(BATCH_SIZE, IMAGE_CHANNEL, IMAGE_HEIGHT, IMAGE_WIDTH));
+#else
     this->prediction_context->setBindingDimensions(0, nvinfer1::Dims4(BATCH_SIZE, IMAGE_CHANNEL, IMAGE_HEIGHT, IMAGE_WIDTH));
+#endif
+
+#if NV_TENSORRT_MAJOR >= 10
+    const char* input_tensor_name = this->prediction_engine->getIOTensorName(0);
+    const char* output_tensor_name = this->prediction_engine->getIOTensorName(1);
+    this->prediction_context->setTensorAddress(input_tensor_name, predicitonBindings[0]);
+    this->prediction_context->setTensorAddress(output_tensor_name, predicitonBindings[1]);
+    this->prediction_context->enqueueV3(0);
+#else
+// TODO: refactor, deprecated functionality
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     this->prediction_context->enqueue(BATCH_SIZE, predicitonBindings.data(), 0, nullptr);
+#pragma GCC diagnostic pop
+#endif
+
     // VLOG(INFO) << "Output: " << log_cuda_bf(prediction_output_dims[0],
     // predicitonBindings[1], 200);
     std::vector<float> output(BATCH_SIZE * refer_rows * OUTPUT_WIDTH);
@@ -81,10 +99,25 @@ std::vector<float> Yolov7TRT::prepareImage(cv::Mat& img)
 
 bool Yolov7TRT::processInput(float* hostDataBuffer, const int batchSize, cudaStream_t& stream)
 {
+#if NV_TENSORRT_MAJOR > 8 || (NV_TENSORRT_MAJOR == 8 && NV_TENSORRT_MINOR >= 5)
+    for (size_t i = 0; i < this->prediction_engine->getNbIOTensors(); ++i) {
+        const char* tensor_name = this->prediction_engine->getIOTensorName(i);
+        nvinfer1::Dims engine_dims = this->prediction_engine->getTensorShape(tensor_name);
+        int32_t binding_size = volume(engine_dims) * batchSize * sizeof(float);
+        binding_size = (binding_size > 0) ? binding_size : -binding_size;
+        if (this->prediction_engine->getTensorIOMode(tensor_name) ==  nvinfer1::TensorIOMode::kINPUT)
+        {
+            input_buffers.emplace_back(new float());
+            cudaMalloc(&input_buffers.back(), binding_size);
+            prediction_input_dims.emplace_back(engine_dims);
+        }
+        else if (this->prediction_engine->getTensorIOMode(tensor_name) ==  nvinfer1::TensorIOMode::kOUTPUT)
+#else
     // std::vector< void* >
     // input_buffers(this->prediction_engine->getNbBindings()); // buffers for
     // input and output data
     for (size_t i = 0; i < this->prediction_engine->getNbBindings(); ++i) {
+        nvinfer1::Dims engine_dims = this->prediction_engine->getBindingDimensions(i);
         int32_t binding_size = volume(this->prediction_engine->getBindingDimensions(i)) * batchSize * sizeof(float);
         binding_size = (binding_size > 0) ? binding_size : -binding_size;
         // std::cout << "Size of: " << binding_size << std::endl;
@@ -92,10 +125,13 @@ bool Yolov7TRT::processInput(float* hostDataBuffer, const int batchSize, cudaStr
             input_buffers.emplace_back(new float());
             cudaMalloc(&input_buffers.back(), binding_size);
             prediction_input_dims.emplace_back(this->prediction_engine->getBindingDimensions(i));
-        } else {
+        }
+        else
+#endif
+        {
             output_buffers.emplace_back(new float());
             cudaMalloc(&output_buffers.back(), binding_size);
-            prediction_output_dims.emplace_back(this->prediction_engine->getBindingDimensions(i));
+            prediction_output_dims.emplace_back(engine_dims);
         }
     }
 

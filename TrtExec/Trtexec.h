@@ -4,6 +4,7 @@
 #include "EmoiLogger.h"
 #include "NvInfer.h"
 #include "NvInferRuntime.h"
+#include <NvInferVersion.h>
 #include "NvOnnxParser.h"
 #include "fstream"
 #include <assert.h>

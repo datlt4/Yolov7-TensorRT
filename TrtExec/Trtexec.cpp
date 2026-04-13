@@ -83,19 +83,36 @@ bool TrtExec::loadEngine(const std::string& fileName)
     return this->prediction_engine != nullptr;
 }
 
+#if NV_TENSORRT_MAJOR > 8 || (NV_TENSORRT_MAJOR == 8 && NV_TENSORRT_MINOR >= 5)
+int32_t TrtExec::getBindingCount()
+{
+    return this->prediction_engine->getNbIOTensors();
+}
+#else
 int32_t TrtExec::getNbBindings()
 {
     return this->prediction_engine->getNbBindings();
 }
+#endif
 
 nvinfer1::Dims TrtExec::getBindingDimensions(int32_t bindingIndex)
 {
-    return this->prediction_engine->getBindingDimensions(bindingIndex);
+#if NV_TENSORRT_MAJOR > 8 || (NV_TENSORRT_MAJOR == 8 && NV_TENSORRT_MINOR >= 5)
+        const char* tensor_name = this->prediction_engine->getIOTensorName(bindingIndex);
+        return this->prediction_engine->getTensorShape(tensor_name);
+#else
+        return this->prediction_engine->getBindingDimensions(bindingIndex);
+#endif
 }
 
 nvinfer1::DataType TrtExec::getBindingDataType(int32_t bindingIndex)
 {
+#if NV_TENSORRT_MAJOR > 8 || (NV_TENSORRT_MAJOR == 8 && NV_TENSORRT_MINOR >= 5)
+    const char* tensor_name = this->prediction_engine->getIOTensorName(bindingIndex);
+    return this->prediction_engine->getTensorDataType(tensor_name);
+#else
     return this->prediction_engine->getBindingDataType(bindingIndex);
+#endif
 }
 
 int TrtExec::getMaxBatchSize()

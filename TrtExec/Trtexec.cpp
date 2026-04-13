@@ -22,9 +22,17 @@ bool TrtExec::parseOnnxModel()
     }
     config->setFlag(nvinfer1::BuilderFlag::kFP16);
     // allow TensorRT to use up to 1GB of GPU memory for tactic selection.
+#if NV_TENSORRT_MAJOR >= 10
+    config->setMemoryPoolLimit(nvinfer1::MemoryPoolType::kWORKSPACE, info.workspace);
+#else
     config->setMaxWorkspaceSize(info.workspace);
+#endif
+
     if (info.dynamicOnnx) {
+#if NV_TENSORRT_MAJOR < 10
+        // Legacy implicit batch builder constraint (deprecated in TensorRT 10)
         builder->setMaxBatchSize(info.maxBatchSize);
+#endif
         // generate TensorRT engine optimized for the target platform
         nvinfer1::IOptimizationProfile* profileCalib = builder->createOptimizationProfile();
         // We do not need to check the return of setDimension and
@@ -34,7 +42,10 @@ bool TrtExec::parseOnnxModel()
         profileCalib->setDimensions(info.inputName.c_str(), nvinfer1::OptProfileSelector::kMAX, nvinfer1::Dims4{ info.maxBatchSize, info.maxImageChannel, info.maxImageHeight, info.maxImageWidth });
         config->addOptimizationProfile(profileCalib);
     } else {
+#if NV_TENSORRT_MAJOR < 10
+        // Legacy implicit batch builder constraint (deprecated in TensorRT 10)
         builder->setMaxBatchSize(1);
+#endif
     }
     this->prediction_engine.reset(builder->buildEngineWithConfig(*prediction_network, *config));
     this->prediction_context.reset(this->prediction_engine->createExecutionContext());
@@ -117,7 +128,12 @@ nvinfer1::DataType TrtExec::getBindingDataType(int32_t bindingIndex)
 
 int TrtExec::getMaxBatchSize()
 {
+#if NV_TENSORRT_MAJOR < 10
     return this->prediction_engine->getMaxBatchSize();
+#else
+    // TensorRT 10+ uses explicit batch, return default
+    return this->maxBatchSize;
+#endif
 }
 
 bool TrtExec::clearBuffer(bool freeInput, bool freeOutput)

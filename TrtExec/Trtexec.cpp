@@ -89,9 +89,9 @@ bool TrtExec::loadEngine(const std::string& fileName)
 
     EmoiUniquePtr<nvinfer1::IRuntime> runtime{ nvinfer1::createInferRuntime(iVLogger.getTRTLogger()) };
 #if NV_TENSORRT_MAJOR >= 10
-    this->prediction_engine.reset(this->prediction_runtime->deserializeCudaEngine(engineData.data(), fsize));
+    this->prediction_engine.reset(this->runtime->deserializeCudaEngine(engineData.data(), fsize));
 #else
-    this->prediction_engine.reset(this->prediction_runtime->deserializeCudaEngine(engineData.data(), fsize, nullptr));
+    this->prediction_engine.reset(this->runtime->deserializeCudaEngine(engineData.data(), fsize, nullptr));
 #endif
     this->prediction_context.reset(this->prediction_engine->createExecutionContext());
 #if NV_TENSORRT_MAJOR < 10

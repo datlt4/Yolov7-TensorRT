@@ -123,7 +123,11 @@ class TrtExec
     cudaStream_t stream;
     int maxBatchSize;
 
+#if NV_TENSORRT_MAJOR > 8 || (NV_TENSORRT_MAJOR == 8 && NV_TENSORRT_MINOR >= 5)
+    int32_t getBindingCount();
+#else
     int32_t getNbBindings();
+#endif
     nvinfer1::Dims getBindingDimensions(int32_t bindingIndex);
     nvinfer1::DataType getBindingDataType(int32_t bindingIndex);
     int getMaxBatchSize();
@@ -209,6 +213,12 @@ inline unsigned int getElementSize(nvinfer1::DataType t)
         case nvinfer1::DataType::kBOOL:
         case nvinfer1::DataType::kINT8:
             return 1;
+#if NV_TENSORRT_MAJOR > 8 || (NV_TENSORRT_MAJOR == 8 && NV_TENSORRT_MINOR >= 6)
+    case nvinfer1::DataType::kUINT8:
+        return 1;
+    case nvinfer1::DataType::kFP8:
+        return 1;
+#endif
     }
     throw std::runtime_error("Invalid DataType.");
     return 0;

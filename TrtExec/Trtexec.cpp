@@ -88,9 +88,18 @@ bool TrtExec::loadEngine(const std::string& fileName)
     }
 
     EmoiUniquePtr<nvinfer1::IRuntime> runtime{ nvinfer1::createInferRuntime(iVLogger.getTRTLogger()) };
-    this->prediction_engine.reset(runtime->deserializeCudaEngine(engineData.data(), fsize, nullptr));
+#if NV_TENSORRT_MAJOR >= 10
+    this->prediction_engine.reset(this->prediction_runtime->deserializeCudaEngine(engineData.data(), fsize));
+#else
+    this->prediction_engine.reset(this->prediction_runtime->deserializeCudaEngine(engineData.data(), fsize, nullptr));
+#endif
     this->prediction_context.reset(this->prediction_engine->createExecutionContext());
+#if NV_TENSORRT_MAJOR < 10
     this->maxBatchSize = this->prediction_engine->getMaxBatchSize();
+#else
+    // TensorRT 10+ uses explicit batch, maxBatchSize is not applicable
+    this->maxBatchSize = 1;
+#endif
     return this->prediction_engine != nullptr;
 }
 
